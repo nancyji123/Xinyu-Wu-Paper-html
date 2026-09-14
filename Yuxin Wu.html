@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TESSERA-ABM · Cyberpunk Personality Sim (v2.4)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--neon-blue:#00d4ff;--neon-pink:#ff00c8;--neon-green:#00ff9d;--neon-yellow:#ffe600;--bg-dark:#0b0d15;}
+html,body{width:100vw;height:100vh;overflow:hidden;background:var(--bg-dark);font-family:'JetBrains Mono',monospace;color:#c8d8e8;user-select:none;}
+body::before{content:"";position:fixed;top:0;left:0;width:100%;height:100%;background-image:linear-gradient(rgba(0,212,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.04) 1px,transparent 1px);background-size:50px 50px;pointer-events:none;z-index:0;}
+#startOverlay,#modeOverlay,#loadingOverlay,#tutorialOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#0a0c10;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;font-family:'Press Start 2P',monospace;}
+#modeOverlay{display:none;background:#0a0c10;gap:28px;z-index:9998;}
+#loadingOverlay{display:none;background:rgba(10,12,16,0.92);z-index:10001;}
+#tutorialOverlay{display:none;background:rgba(8,12,24,0.92);z-index:10000;padding:40px;}
+.pixel-title{font-size:32px;color:#00d4ff;text-shadow:3px 3px 0 #0a0c10,0 0 25px #00d4ff,0 0 50px #00d4ff;letter-spacing:3px;margin-bottom:6px;text-align:center;line-height:1.2;}
+.pixel-sub{font-size:10px;color:#ff00c8;text-shadow:0 0 15px #ff00c8;letter-spacing:5px;margin-bottom:24px;animation:blink 1.2s step-end infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.pixel-menu{display:flex;flex-direction:column;gap:12px;align-items:center;width:320px;}
+.pixel-menu-item{font-size:13px;text-transform:uppercase;padding:10px 24px;width:100%;text-align:center;background:transparent;border:2px solid rgba(255,255,255,0.08);color:#aabbcc;cursor:pointer;transition:0.2s;letter-spacing:1.5px;}
+.pixel-menu-item:hover{border-color:#00d4ff;color:#fff;background:rgba(0,212,255,0.05);}
+.pixel-menu-item.primary{border-color:#00ff9d;color:#00ff9d;}
+.pixel-menu-item.primary:hover{background:#00ff9d;color:#0a0c10;}
+.pixel-footer{position:absolute;bottom:20px;left:0;right:0;display:flex;justify-content:space-between;padding:0 30px;font-size:8px;color:#445566;letter-spacing:0.5px;}
+.load-box{background:rgba(8,12,24,0.85);border:2px solid #00d4ff;border-radius:4px;padding:40px 50px;min-width:420px;text-align:center;}
+.load-title{font-size:14px;color:#00d4ff;letter-spacing:3px;margin-bottom:24px;animation:blink 1s step-end infinite;}
+.load-sub{font-size:9px;color:#667788;letter-spacing:2px;margin-bottom:18px;}
+.load-track{width:100%;height:6px;background:#1a2a3a;border-radius:3px;overflow:hidden;margin-bottom:12px;}
+.load-fill{height:100%;width:0%;background:linear-gradient(90deg,#00d4ff,#ff00c8);transition:width 0.1s;}
+.load-percent{font-size:10px;color:#00d4ff;}
+.mode-group{display:flex;gap:28px;}
+.mode-btn{font-family:'Press Start 2P',monospace;font-size:14px;padding:14px 32px;background:transparent;border:2px solid #00d4ff;color:#00d4ff;cursor:pointer;transition:0.2s;text-transform:uppercase;}
+.mode-btn:hover{background:#00d4ff;color:#0a0c10;}
+.tut-box{background:rgba(10,16,28,0.95);border:1px solid var(--neon-blue);border-radius:8px;max-width:700px;width:100%;max-height:80vh;padding:40px 50px;overflow-y:auto;position:relative;}
+.tut-box h2{font-family:'Orbitron',sans-serif;font-size:22px;color:var(--neon-blue);margin-bottom:20px;letter-spacing:2px;border-bottom:1px solid rgba(0,212,255,0.1);padding-bottom:12px;}
+.tut-content{font-size:12px;line-height:2;color:#b0c8d8;}
+.tut-content .key{display:inline-block;background:#1a2a3a;padding:0 8px;border-radius:2px;color:#fff;font-size:10px;border:1px solid #334455;}
+.tut-close{position:absolute;top:16px;right:20px;font-size:18px;color:var(--neon-pink);background:none;border:none;cursor:pointer;}
+#mainApp{display:none;width:100vw;height:100vh;flex-direction:column;position:relative;z-index:1;}
+.mode-switcher{display:flex;align-items:center;gap:12px;padding:10px 24px;background:rgba(8,12,24,0.9);border-bottom:1px solid rgba(0,212,255,0.15);flex-shrink:0;}
+.mode-switcher button{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;padding:6px 18px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#8899aa;border-radius:2px;cursor:pointer;text-transform:uppercase;}
+.mode-switcher button.active{border-color:var(--neon-blue);color:var(--neon-blue);}
+.mode-switcher button:hover{color:#fff;}
+.badge{margin-left:auto;padding:4px 16px;border-radius:2px;font-size:10px;font-weight:700;border:1px solid #2a2a2a;background:#111;color:#555;text-transform:uppercase;font-family:'Orbitron',sans-serif;}
+.badge.run{color:var(--neon-green);border-color:var(--neon-green);}
+.badge.pause{color:#ffaa00;border-color:#ffaa00;}
+.pause-btn,.speed-btn{font-family:'Orbitron',sans-serif;font-weight:700;font-size:10px;padding:6px 20px;border:2px solid var(--neon-pink);background:transparent;color:var(--neon-pink);border-radius:2px;cursor:pointer;text-transform:uppercase;margin-left:12px;}
+.speed-btn{border-color:var(--neon-green);color:var(--neon-green);}
+.app-layout{display:flex;flex:1;min-height:0;height:calc(100vh - 60px);}
+.sim{flex:1;min-width:0;position:relative;background:#0b0d15;border-right:1px solid rgba(0,212,255,0.08);overflow:hidden;}
+.sim-header{position:absolute;top:16px;left:24px;z-index:10;font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;color:var(--neon-blue);background:rgba(0,0,0,0.6);padding:6px 16px;border:1px solid rgba(0,212,255,0.2);border-radius:2px;}
+.canvas-wrap{width:100%;height:100%;position:relative;}
+.canvas-wrap canvas{display:block;width:100%;height:100%;}
+.env-tags{position:absolute;top:20px;left:0;right:0;display:flex;justify-content:space-between;padding:0 30px;pointer-events:none;font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;opacity:0.6;text-transform:uppercase;}
+.env-tags span.trad{color:var(--neon-green);}
+.env-tags span.digi{color:var(--neon-blue);}
+.divider{position:absolute;top:10%;bottom:10%;left:50%;width:1px;background:linear-gradient(to bottom,transparent,rgba(0,212,255,0.15),transparent);pointer-events:none;}
+.step-display{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);font-size:10px;color:rgba(255,255,255,0.6);background:rgba(0,0,0,0.7);padding:4px 18px;border:1px solid rgba(0,212,255,0.1);border-radius:2px;pointer-events:none;}
+.tooltip{position:absolute;pointer-events:none;background:rgba(8,12,24,0.95);border:1px solid var(--neon-blue);border-radius:4px;padding:10px 14px;font-size:9px;line-height:1.8;display:none;z-index:20;min-width:150px;color:#b0c8d8;}
+.tooltip .name{color:#fff;font-weight:700;font-size:11px;}
+.ctrl{width:420px;min-width:420px;max-width:420px;background:rgba(8,12,24,0.9);border-left:1px solid rgba(0,212,255,0.08);padding:16px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;height:100%;}
+.ctrl::-webkit-scrollbar{width:4px;}
+.ctrl::-webkit-scrollbar-thumb{background:#2a3a4a;border-radius:4px;}
+.sect{background:rgba(0,212,255,0.02);border:1px solid rgba(0,212,255,0.06);border-radius:4px;padding:10px 12px;flex-shrink:0;}
+.sect h3{font-family:'Orbitron',sans-serif;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--neon-blue);margin-bottom:6px;border-bottom:1px solid rgba(0,212,255,0.1);padding-bottom:4px;}
+.chart-box{width:100%;height:150px;border-radius:2px;overflow:hidden;background:rgba(0,0,0,0.4);border:1px solid rgba(0,212,255,0.05);margin-bottom:4px;}
+.chart-box:last-child{margin-bottom:0;}
+.btn-row{display:flex;flex-wrap:wrap;gap:5px;}
+.btn{padding:4px 12px;font-size:8px;font-weight:700;font-family:'Orbitron',sans-serif;border:1px solid rgba(255,255,255,0.08);border-radius:2px;background:rgba(255,255,255,0.02);color:#8899aa;cursor:pointer;text-transform:uppercase;}
+.btn:hover{border-color:var(--neon-blue);color:#fff;background:rgba(0,212,255,0.05);}
+.btn.on{border-color:var(--neon-blue);color:var(--neon-blue);background:rgba(0,212,255,0.08);}
+.btn.primary{background:var(--neon-blue);color:#0b0d15;border-color:var(--neon-blue);}
+input[type="range"]{width:100%;margin:4px 0;-webkit-appearance:none;background:transparent;}
+input[type="range"]::-webkit-slider-runnable-track{height:2px;background:#1a2a3a;border-radius:2px;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;height:12px;width:12px;border-radius:0;background:var(--neon-blue);margin-top:-5px;cursor:pointer;}
+.checkbox-row{display:flex;flex-wrap:wrap;gap:6px 14px;}
+.checkbox-row label{font-size:7px;color:#aabbcc;display:flex;align-items:center;gap:4px;cursor:pointer;}
+.checkbox-row input[type="checkbox"]{accent-color:var(--neon-blue);width:12px;height:12px;cursor:pointer;}
+.batch-output{background:rgba(0,0,0,0.6);border-radius:2px;padding:6px 10px;font-size:7px;color:var(--neon-green);max-height:300px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;border:1px solid rgba(0,255,157,0.1);margin-top:4px;line-height:1.6;}
+.agent-detail{font-size:8px;line-height:2;color:#b0c8d8;max-height:120px;overflow-y:auto;}
+.personal-chart-box{width:100%;height:70px;margin-top:4px;border-radius:2px;overflow:hidden;background:rgba(0,0,0,0.4);border:1px solid rgba(0,212,255,0.05);}
+.amp-label{font-size:9px;color:#aabccc;display:block;margin-top:2px;}
+.amp-value{font-size:9px;color:#c8d8e8;}
+</style>
+</head>
+<body>
+
+<div id="startOverlay">
+  <div class="pixel-title"><span>TESSERA</span>·<span>ABM</span></div>
+  <div class="pixel-sub">// PERSONALITY DRIFT v2.4 //</div>
+  <div class="pixel-menu">
+    <div class="pixel-menu-item primary" onclick="startWithLoading()">▶ START SIMULATION</div>
+    <div class="pixel-menu-item" onclick="openTutorial()">ℹ HOW TO USE</div>
+    <div class="pixel-menu-item" onclick="alert('TESSERA-ABM — v2.4\nH1/H2 batch diagnostics enabled')">CREDITS</div>
+  </div>
+  <div class="pixel-footer"><span>EN</span><span>build 2.4.0</span></div>
+</div>
+
+<div id="loadingOverlay">
+  <div class="load-box">
+    <div class="load-title">▼ INITIALIZING</div>
+    <div class="load-sub">// TESSERA ENGINE v2.4 //</div>
+    <div class="load-track"><div class="load-fill" id="loadFill"></div></div>
+    <div class="load-percent">PROGRESS <span id="loadPercent">0</span>%</div>
+  </div>
+</div>
+
+<div id="tutorialOverlay">
+  <div class="tut-box">
+    <button class="tut-close" onclick="closeTutorial()">×</button>
+    <h2>▼ OPERATION MANUAL</h2>
+    <div class="tut-content">
+      <p><strong>Batch Run 30x</strong> now outputs three sets of results:<br>
+        · Δp_N (Neuroticism rank-order stability reduction)<br>
+        · H1: state |mean| comparison (Digital vs Traditional)<br>
+        · H2: state variance comparison for N and HH</p>
+      <div class="tut-footer">Press <span class="key">ESC</span> to close</div>
+    </div>
+  </div>
+</div>
+
+<div id="modeOverlay">
+  <h1>SELECT EXPERIMENT</h1>
+  <div class="mode-group">
+    <button class="mode-btn" onclick="startMode('society')">DIGITAL SOCIETY</button>
+    <button class="mode-btn" onclick="startMode('custom')">CUSTOM AGENT</button>
+  </div>
+</div>
+
+<div id="mainApp">
+  <div class="mode-switcher">
+    <button id="switchSociety" onclick="switchToMode('society')">Society</button>
+    <button id="switchCustom" onclick="switchToMode('custom')">Custom</button>
+    <button class="speed-btn" id="speedButton" onclick="toggleSpeed()">1x</button>
+    <span class="badge run" id="statusBadge">Running</span>
+    <button class="pause-btn" id="pauseButton" onclick="togglePause()">II PAUSE</button>
+  </div>
+  <div class="app-layout">
+    <div class="sim">
+      <div class="sim-header">▼ TESSERA ENGINE</div>
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="simCanvas"></canvas>
+        <div class="env-tags"><span class="trad">◆ TRADITIONAL</span><span class="digi">◆ DIGITAL</span></div>
+        <div class="divider"></div>
+        <div class="step-display" id="stepDisplay">STEP: 0</div>
+        <div class="tooltip" id="tooltip"></div>
+      </div>
+    </div>
+    <div class="ctrl" id="ctrlPanel"></div>
+  </div>
+</div>
+
+<script>
+function mulberry32(seed) {
+  return function () {
+    let t = (seed += 0x6D2B79F5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+let globalRng = Math.random;
+
+const TRAITS = ["O", "C", "E", "A", "N", "HH"];
+const COLORS = { O: "#f5b8c0", C: "#98d0e8", E: "#e8d8a0", A: "#a8d8b8", N: "#e0b8e0", HH: "#e8c8b0" };
+const STAB = { C: 0.85, A: 0.75, E: 0.70, O: 0.65, N: 0.55, HH: 0.45 };
+
+const TRAD_EV = [
+  { name: "Face-to-face praise",  dir: +1 },{ name: "Team success",         dir: +1 },
+  { name: "Friend confides",      dir: +1 },{ name: "Family dinner",        dir: +1 },
+  { name: "Handwritten letter",   dir: +1 },{ name: "Community work",       dir: +1 },
+  { name: "Book club",            dir: +1 },{ name: "Elder guidance",       dir: +1 },
+  { name: "Stranger smile",       dir: +1 },{ name: "Offer seat",           dir: +1 },
+  { name: "Colleague help",       dir: +1 },{ name: "Neighbor chat",        dir: +1 },
+  { name: "Art exhibition",       dir: +1 },{ name: "Birthday party",       dir: +1 },
+  { name: "Receive gift",         dir: +1 },
+  { name: "Public criticism",     dir: -1 },{ name: "In-person apology",    dir: -1 },
+  { name: "In-person argument",   dir: -1 },{ name: "Attend funeral",       dir: -1 },
+  { name: "Misunderstanding",     dir: -1 },{ name: "Face-to-face debate",  dir: -1 },
+  { name: "Rejected by friend",   dir: -1 },{ name: "Family conflict",      dir: -1 },
+  { name: "Failed exam",          dir: -1 },{ name: "Job rejection",        dir: -1 },
+  { name: "Betrayed by colleague",dir: -1 },{ name: "Gossip behind back",   dir: -1 },
+  { name: "Lost important item",  dir: -1 },{ name: "Public embarrassment", dir: -1 },
+  { name: "Rumour spread",        dir: -1 }
+];
+const DIGI_EV = [
+  { name: "Get likes",             dir: +1 },{ name: "Video call",            dir: +1 },
+  { name: "Private message",       dir: +1 },{ name: "Online badge",          dir: +1 },
+  { name: "E-book club",           dir: +1 },{ name: "AI tutor feedback",     dir: +1 },
+  { name: "Live cheering",         dir: +1 },{ name: "Remote teamwork",       dir: +1 },
+  { name: "Virtual community",     dir: +1 },{ name: "Meditation app",        dir: +1 },
+  { name: "MOOC course",           dir: +1 },{ name: "E-sports match",        dir: +1 },
+  { name: "Virtual gift",          dir: +1 },{ name: "Crowdfunding success",  dir: +1 },
+  { name: "Algorithm feed",        dir: +1 },
+  { name: "Cyberbullying",         dir: -1 },{ name: "Anonymous confession",  dir: -1 },
+  { name: "Public apology tweet",  dir: -1 },{ name: "Social media fight",    dir: -1 },
+  { name: "Online memorial",       dir: -1 },{ name: "Misinformation",        dir: -1 },
+  { name: "Forum debate",          dir: -1 },{ name: "Downvoted post",        dir: -1 },
+  { name: "Unfollowed",            dir: -1 },{ name: "Negative comments",     dir: -1 },
+  { name: "Body-shaming comment",  dir: -1 },{ name: "Ghosted on dating app", dir: -1 },
+  { name: "Screenshot shaming",    dir: -1 },{ name: "Group chat exclusion",  dir: -1 },
+  { name: "Algorithmic doomsurf",  dir: -1 }
+];
+
+let digitalBase = 2.5, digitalN = 1.5, digitalHH = 1.5, eventDur = 4.0;
+let paused = false, fast = false, ageFocus = 'young';
+let simW = 800, simH = 600;
+let selectedAgent = null, globalEvents = [], falling = [];
+let currentMode = 'society';
+let societyEnvT = null, societyEnvD = null;
+let customEnvT = null, customEnvD = null;
+let customAgentTrad = null, customAgentDigi = null;
+let canvasReady = false;
+
+const ABLATION = {
+  enableStateAccumulation: true, enableExpectancyGate: true,
+  enableAgePlasticity: true, enableDigitalAmplification: true
+};
+
+const NAME_POOL = ["Jessica","Michael","Ashley","Christopher","Amanda","Matthew","Sarah","Joshua","Jennifer",
+  "Andrew","Nicole","Brandon","Stephanie","Justin","Katherine","Ryan","Elizabeth","Daniel",
+  "Megan","David","Rachel","James","Lauren","John","Emily","Robert","Michelle","William"];
+function randomName(rng) { const r = rng || globalRng; return NAME_POOL[Math.floor(r() * NAME_POOL.length)]; }
+
+class Agent {
+  constructor(x, y, age, name, background, traitsOverride, rng) {
+    this.rng = rng || globalRng;
+    this.x = x; this.y = y; this.age = age;
+    this.name = name || randomName(this.rng);
+    this.traits = {}; this.base = {};
+    for (let t of TRAITS) {
+      let v = traitsOverride ? traitsOverride[t] : Math.max(0, Math.min(1, this._gauss(0.5, 0.28)));
+      this.traits[t] = v; this.base[t] = v;
+    }
+    this.state = { O: 0, C: 0, E: 0, A: 0, N: 0, HH: 0 };
+    this.expect = { O: 0.5, C: 0.5, E: 0.5, A: 0.5, N: 0.5, HH: 0.5 };
+    if (background) this.background = background;
+    else {
+      const fams = ["Nuclear","Single-parent","Extended","Foster"];
+      const edus = ["High School","College","Graduate","Vocational"];
+      const ecos = ["Low-income","Middle","Upper-middle","Wealthy"];
+      this.background = {
+        family: fams[Math.floor(this.rng()*fams.length)],
+        education: edus[Math.floor(this.rng()*edus.length)],
+        economy: ecos[Math.floor(this.rng()*ecos.length)],
+        siblings: Math.floor(this.rng()*4),
+        locale: this.rng() > 0.5 ? "Urban" : "Rural"
+      };
+    }
+    this.personalEvents = [];
+    this.traitHistory = [];
+    this.recordHistory(0);
+  }
+  _gauss(m, s) {
+    let u = 0, v = 0;
+    while (u === 0) u = this.rng();
+    while (v === 0) v = this.rng();
+    return m + s * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  plasticity() { if (this.age < 18) return 0.9; if (this.age < 35) return 0.6; return 0.3; }
+  recordHistory(step) {
+    let snap = { step, traits: {} };
+    for (let t of TRAITS) snap.traits[t] = this.traits[t];
+    this.traitHistory.push(snap);
+    if (this.traitHistory.length > 200) this.traitHistory.shift();
+  }
+  getDominantColor() {
+    let maxT = 'O', maxV = -1;
+    for (let t of TRAITS) if (this.traits[t] > maxV) { maxV = this.traits[t]; maxT = t; }
+    return COLORS[maxT] || '#b0b8c0';
+  }
+  tessera(digital, impact) {
+    if (!impact) return;
+    let { trait, intensity, dir } = impact;
+    if (!dir) dir = +1;
+    let mult = digital ? digitalBase : 1.0;
+    if (!ABLATION.enableDigitalAmplification) mult = 1.0;
+    if (digital && trait === 'N') mult *= digitalN;
+    if (digital && trait === 'HH') mult *= digitalHH;
+    let total = intensity * mult * 2.0;
+    let gate = 1 - Math.abs(this.traits[trait] - this.expect[trait]);
+    if (!ABLATION.enableExpectancyGate) gate = 1.0;
+    let eff = total * gate;
+    let plast = this.plasticity() * (1 - STAB[trait]);
+    if (!ABLATION.enableAgePlasticity) plast = 0.6 * (1 - STAB[trait]);
+    if (!digital && this.age >= 18 && this.age < 35) plast *= 0.5;
+    let oldVal = this.traits[trait];
+    if (ABLATION.enableStateAccumulation) {
+      this.state[trait] += dir * eff * plast;
+      if (Math.abs(this.state[trait]) > 0.05) {
+        this.traits[trait] = Math.max(0, Math.min(1, this.traits[trait] + this.state[trait]));
+        this.expect[trait] = 0.7 * this.expect[trait] + 0.3 * this.traits[trait];
+        this.state[trait] = 0;
+      }
+    }
+    let delta = this.traits[trait] - oldVal;
+    if (delta !== 0) {
+      this.personalEvents.push({ name: impact.name, trait, delta });
+      if (this.personalEvents.length > 15) this.personalEvents.shift();
+    }
+  }
+  move(b) {
+    this.x += Math.floor(this.rng() * 5) - 2;
+    this.y += Math.floor(this.rng() * 5) - 2;
+    this.x = Math.max(b.minX, Math.min(b.maxX, this.x));
+    this.y = Math.max(b.minY, Math.min(b.maxY, this.y));
+  }
+}
+
+class Environment {
+  constructor(digital, rng) {
+    this.digital = digital;
+    this.rng = rng || globalRng;
+    this.agents = []; this.steps = 0;
+    this.ageHistory = [];
+    this.rhoHistory = { child: [], young: [], old: [] };
+  }
+  init(bounds, customAgents = null) {
+    this.agents = []; this.steps = 0;
+    this.ageHistory = []; this.rhoHistory = { child: [], young: [], old: [] };
+    if (customAgents) this.agents = customAgents;
+    else {
+      for (let i = 0; i < 120; i++) {
+        let age = ageFocus === 'child' ? this.rng() * 18
+          : ageFocus === 'young' ? 18 + this.rng() * 17
+          : 35 + this.rng() * 30;
+        let x = bounds.minX + this.rng() * (bounds.maxX - bounds.minX);
+        let y = bounds.minY + this.rng() * (bounds.maxY - bounds.minY);
+        this.agents.push(new Agent(x, y, age, null, null, null, this.rng));
+      }
+    }
+    this.bounds = bounds;
+  }
+  step() {
+    this.steps++;
+    for (let a of this.agents) a.move(this.bounds);
+    let freq = this.digital ? 10 : 15;
+    if (this.steps % freq === 0) {
+      let pool = this.digital ? DIGI_EV : TRAD_EV;
+      let ev = pool[Math.floor(this.rng() * pool.length)];
+      let impact = this._impact(ev);
+      let n = this.digital ? 20 : 12;
+      let sample = this._sample(n);
+      for (let a of sample) a.tessera(this.digital, impact);
+      globalEvents.unshift({ text: ev.name, trait: impact.trait, digital: this.digital });
+      if (globalEvents.length > 30) globalEvents.pop();
+    }
+    if (this.steps % 20 === 0) {
+      for (let a of this.agents) a.recordHistory(this.steps);
+      this._stats();
+    }
+  }
+  _impact(ev) {
+    let hash = 0;
+    for (let i = 0; i < ev.name.length; i++) hash = (hash * 31 + ev.name.charCodeAt(i)) >>> 0;
+    let trait = TRAITS[hash % 6];
+    let intensity = (this.rng() * 0.08 + 0.04) * (this.digital ? 1.3 : 1);
+    return { trait, intensity, dir: ev.dir, name: ev.name };
+  }
+  _sample(n) {
+    let p = [...this.agents]; let r = [];
+    let k = Math.min(n, p.length);
+    for (let i = 0; i < k; i++) {
+      let idx = Math.floor(this.rng() * p.length);
+      r.push(p.splice(idx, 1)[0]);
+    }
+    return r;
+  }
+  _stats() {
+    let groups = { child: [], young: [], old: [] };
+    for (let i = 0; i < this.agents.length; i++) {
+      let a = this.agents[i].age;
+      if (a < 18) groups.child.push(i);
+      else if (a < 35) groups.young.push(i);
+      else groups.old.push(i);
+    }
+    const self = this;
+    function computeR(indices) {
+      if (indices.length < 3) return Array(6).fill(0);
+      let gBase = indices.map(i => TRAITS.map(t => self.agents[i].base[t]));
+      let gArr = indices.map(i => TRAITS.map(t => self.agents[i].traits[t]));
+      let rVals = [];
+      for (let j = 0; j < 6; j++) rVals.push(self._spearman(gBase.map(r => r[j]), gArr.map(r => r[j])));
+      return rVals;
+    }
+    function computeMean(indices) {
+      let means = Array(6).fill(0);
+      if (indices.length === 0) return means;
+      for (let idx of indices) for (let t = 0; t < 6; t++) means[t] += self.agents[idx].traits[TRAITS[t]];
+      return means.map(v => v / indices.length);
+    }
+    function computeStateAbsMean(indices) {
+      let means = Array(6).fill(0);
+      if (indices.length === 0) return means;
+      for (let idx of indices) for (let t = 0; t < 6; t++) means[t] += Math.abs(self.agents[idx].state[TRAITS[t]]);
+      return means.map(v => v / indices.length);
+    }
+    function computeStateAbsVar(indices) {
+      let vars = Array(6).fill(0);
+      if (indices.length < 2) return vars;
+      const means = computeStateAbsMean(indices);
+      for (let idx of indices) for (let t = 0; t < 6; t++) {
+        const d = Math.abs(self.agents[idx].state[TRAITS[t]]) - means[t];
+        vars[t] += d * d;
+      }
+      return vars.map(v => v / (indices.length - 1));
+    }
+    let childR = computeR(groups.child), youngR = computeR(groups.young), oldR = computeR(groups.old);
+    let childMean = computeMean(groups.child), youngMean = computeMean(groups.young), oldMean = computeMean(groups.old);
+    let youngStateAbsMean = computeStateAbsMean(groups.young);
+    let youngStateAbsVar = computeStateAbsVar(groups.young);
+    let avgAge = this.agents.reduce((s, a) => s + a.age, 0) / this.agents.length;
+    this.ageHistory.push({
+      step: this.steps, age: avgAge,
+      childR, youngR, oldR, childMean, youngMean, oldMean,
+      youngStateAbsMean, youngStateAbsVar
+    });
+    this.rhoHistory.child.push({ step: this.steps, rho: childR });
+    this.rhoHistory.young.push({ step: this.steps, rho: youngR });
+    this.rhoHistory.old.push({ step: this.steps, rho: oldR });
+  }
+  _spearman(x, y) {
+    let n = x.length; if (n < 2) return 1;
+    let rx = this._rank(x), ry = this._rank(y);
+    let mr = (n + 1) / 2, cov = 0, vx = 0, vy = 0;
+    for (let i = 0; i < n; i++) {
+      let dx = rx[i] - mr, dy = ry[i] - mr;
+      cov += dx * dy; vx += dx * dx; vy += dy * dy;
+    }
+    if (vx === 0 || vy === 0) return 1;
+    return cov / Math.sqrt(vx * vy);
+  }
+  _rank(arr) {
+    let idx = arr.map((v, i) => ({ v, i })).sort((a, b) => a.v - b.v);
+    let ranks = new Array(arr.length);
+    for (let i = 0; i < idx.length; i++) ranks[idx[i].i] = i + 1;
+    let j = 0;
+    while (j < idx.length) {
+      let k = j;
+      while (k < idx.length && idx[k].v === idx[j].v) k++;
+      if (k - j > 1) {
+        let avg = (ranks[idx[j].i] + ranks[idx[k-1].i]) / 2;
+        for (let m = j; m < k; m++) ranks[idx[m].i] = avg;
+      }
+      j = k;
+    }
+    return ranks;
+  }
+  exportCSV() {
+    let csv = "type,env,ageGroup,step,O,C,E,A,N,HH\n";
+    const envLabel = this.digital ? "Digital" : "Traditional";
+    const groups = { child: this.rhoHistory.child, young: this.rhoHistory.young, old: this.rhoHistory.old };
+    for (let [gName, data] of Object.entries(groups)) {
+      for (let entry of data) csv += `rank,${envLabel},${gName},${entry.step},${entry.rho.join(",")}\n`;
+    }
+    for (let entry of this.ageHistory) {
+      csv += `mean,${envLabel},child,${entry.step},${entry.childMean.join(",")}\n`;
+      csv += `mean,${envLabel},young,${entry.step},${entry.youngMean.join(",")}\n`;
+      csv += `mean,${envLabel},old,${entry.step},${entry.oldMean.join(",")}\n`;
+      csv += `state_mean,${envLabel},young,${entry.step},${entry.youngStateAbsMean.join(",")}\n`;
+      csv += `state_var,${envLabel},young,${entry.step},${entry.youngStateAbsVar.join(",")}\n`;
+    }
+    return csv;
+  }
+}
+
+// ============================================================
+// LOADING
+// ============================================================
+let loadingComplete = false;
+function startWithLoading() {
+  const overlay = document.getElementById('loadingOverlay');
+  overlay.style.display = 'flex';
+  const fill = document.getElementById('loadFill');
+  const percentSpan = document.getElementById('loadPercent');
+  let progress = 0;
+  const interval = setInterval(() => {
+    progress += Math.random() * 2.5 + 1.2;
+    if (progress > 100) progress = 100;
+    fill.style.width = progress + '%';
+    percentSpan.textContent = Math.floor(progress);
+    if (progress >= 100) {
+      clearInterval(interval); loadingComplete = true;
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        document.getElementById('startOverlay').style.display = 'none';
+        document.getElementById('modeOverlay').style.display = 'flex';
+      }, 400);
+    }
+  }, 60);
+}
+function openTutorial() { document.getElementById('tutorialOverlay').style.display = 'flex'; }
+function closeTutorial() { document.getElementById('tutorialOverlay').style.display = 'none'; }
+
+function startMode(mode) {
+  document.getElementById('modeOverlay').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'flex';
+  currentMode = mode;
+  requestAnimationFrame(() => { initCanvas(); switchToMode(mode); });
+}
+function switchToMode(mode) {
+  currentMode = mode; selectedAgent = null; globalEvents = []; falling = [];
+  if (!canvasReady) initCanvas();
+  if (mode === 'society') {
+    societyEnvT = new Environment(false, Math.random);
+    societyEnvD = new Environment(true, Math.random);
+    const half = simW / 2, pad = 40;
+    societyEnvT.bounds = { minX: pad, maxX: half - pad, minY: pad, maxY: simH - pad };
+    societyEnvD.bounds = { minX: half + pad, maxX: simW - pad, minY: pad, maxY: simH - pad };
+    societyEnvT.init(societyEnvT.bounds);
+    societyEnvD.init(societyEnvD.bounds);
+    customEnvT = customEnvD = null;
+    renderSocietyPanel();
+  } else {
+    societyEnvT = societyEnvD = null;
+    customAgentTrad = customAgentDigi = null;
+    customEnvT = customEnvD = null;
+    renderCustomPanel();
+  }
+  document.getElementById('switchSociety').classList.toggle('active', mode === 'society');
+  document.getElementById('switchCustom').classList.toggle('active', mode === 'custom');
+  document.getElementById('statusBadge').textContent = 'Running';
+  document.getElementById('statusBadge').className = 'badge run';
+  paused = false;
+  document.getElementById('pauseButton').textContent = 'II PAUSE';
+  drawSim();
+  if (mode === 'society') setTimeout(drawCharts, 50);
+}
+
+function renderSocietyPanel() {
+  const panel = document.getElementById('ctrlPanel');
+  panel.innerHTML = `
+    <div class="sect"><h3>Age Group</h3><div class="btn-row">
+      <button class="btn ${ageFocus==='child'?'on':''}" onclick="setAgeFocus('child')">Child</button>
+      <button class="btn ${ageFocus==='young'?'on':''}" onclick="setAgeFocus('young')">Young</button>
+      <button class="btn ${ageFocus==='old'?'on':''}" onclick="setAgeFocus('old')">Older</button>
+    </div></div>
+    <div class="sect"><h3>Rank-order Stability (ρ)</h3><div class="chart-box"><canvas id="rankChartCanvas"></canvas></div></div>
+    <div class="sect"><h3>Mean-level Change</h3><div class="chart-box"><canvas id="meanChartCanvas"></canvas></div></div>
+    <div class="sect"><h3>Trigger Events</h3>
+      <div class="btn-row">
+        <button class="btn" onclick="triggerTradEvent()">▶ Traditional</button>
+        <button class="btn" onclick="triggerDigiEvent()">▶ Digital</button>
+      </div>
+      <input type="range" min="1" max="8" value="4" oninput="eventDur = +this.value" style="margin-top:4px;">
+      <div style="font-size:7px;color:#666;margin-top:2px;">Duration: ${eventDur}s</div>
+    </div>
+    <div class="sect"><h3>Digital Amp.</h3>
+      <label class="amp-label">Base α: <span class="amp-value" id="baseVal">${digitalBase.toFixed(1)}</span></label>
+      <input type="range" min="1" max="5" step="0.1" value="${digitalBase}" oninput="digitalBase=+this.value; document.getElementById('baseVal').textContent=this.value">
+      <label class="amp-label">N extra: <span class="amp-value" id="nVal">${digitalN.toFixed(1)}</span></label>
+      <input type="range" min="1" max="3" step="0.1" value="${digitalN}" oninput="digitalN=+this.value; document.getElementById('nVal').textContent=this.value">
+      <label class="amp-label">HH extra: <span class="amp-value" id="hVal">${digitalHH.toFixed(1)}</span></label>
+      <input type="range" min="1" max="3" step="0.1" value="${digitalHH}" oninput="digitalHH=+this.value; document.getElementById('hVal').textContent=this.value">
+    </div>
+    <div class="sect"><h3>Ablation</h3><div class="checkbox-row">
+      <label><input type="checkbox" checked onchange="toggleAblation('enableStateAccumulation',this.checked)"> State Accum.</label>
+      <label><input type="checkbox" checked onchange="toggleAblation('enableExpectancyGate',this.checked)"> Expect. Gate</label>
+      <label><input type="checkbox" checked onchange="toggleAblation('enableAgePlasticity',this.checked)"> Age Plast.</label>
+      <label><input type="checkbox" checked onchange="toggleAblation('enableDigitalAmplification',this.checked)"> Digital Amp.</label>
+    </div></div>
+    <div class="sect"><h3>Batch & Export</h3>
+      <div class="btn-row">
+        <button class="btn primary" onclick="runBatch()">▶ Run 30x</button>
+        <button class="btn" onclick="exportData()">⬇ Export CSV</button>
+      </div>
+      <div class="batch-output" id="batchOutput">Awaiting batch...</div>
+    </div>
+    <div class="sect"><h3>Agent Detail</h3>
+      <div class="agent-detail" id="agentDetail">Click an agent on canvas.</div>
+      <div class="personal-chart-box"><canvas id="personalChartCanvas"></canvas></div>
+    </div>
+  `;
+  setTimeout(() => { drawCharts(); drawPersonalChart(); }, 60);
+}
+function renderCustomPanel() {
+  const panel = document.getElementById('ctrlPanel');
+  let traitInputs = TRAITS.map(t =>
+    `<div><label style="color:#666;">${t}</label><input type="range" id="cust_${t}" min="0" max="1" step="0.01" value="0.5" oninput="document.getElementById('v_${t}').textContent=this.value"><span id="v_${t}" style="color:#aaa;">0.5</span></div>`
+  ).join('');
+  panel.innerHTML = `
+    <div class="sect"><h3>Custom Agent</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:8px;">
+        <div><label style="color:#666;">Name</label><input type="text" id="custName" value="Alex" style="width:100%;background:#1a1a1a;border:1px solid #222;color:#fff;padding:4px;"></div>
+        <div><label style="color:#666;">Age</label><input type="number" id="custAge" value="25" step="0.1" style="width:100%;background:#1a1a1a;border:1px solid #222;color:#fff;padding:4px;"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:7px;margin-top:6px;">${traitInputs}</div>
+      <button class="btn primary" onclick="startCustomSim()" style="margin-top:10px;width:100%;">Start</button>
+    </div>
+    <div class="sect" id="customDetailArea" style="display:none;">
+      <h3>Agent Detail</h3>
+      <div class="agent-detail" id="agentDetail"></div>
+      <div class="personal-chart-box"><canvas id="personalChartCanvas"></canvas></div>
+      <div class="btn-row" style="margin-top:6px;">
+        <button class="btn" onclick="viewCustomTrad()">Traditional</button>
+        <button class="btn" onclick="viewCustomDigi()">Digital</button>
+      </div>
+    </div>
+  `;
+}
+function toggleAblation(key, val) { ABLATION[key] = val; }
+
+// ============================================================
+// BATCH v2.4: now also outputs H1 (state |mean|) and H2 (state variance) comparisons
+// ============================================================
+function runBatch() {
+  const output = document.getElementById('batchOutput');
+  if (!output) return;
+  output.textContent = "Running 30 paired simulations (same seeds) with state diagnostics...";
+
+  setTimeout(() => {
+    try {
+      const nRuns = 30, steps = 500;
+      const nIdx = TRAITS.indexOf('N');
+      const hhIdx = TRAITS.indexOf('HH');
+
+      let tradDrops = [], digiDrops = [], diffs = [];
+      // H1: state |mean| (aggregated across all 6 traits, time-averaged)
+      let tradStateMean = [], digiStateMean = [];
+      // H2: state variance for N and HH (time-averaged)
+      let tradStateVarN = [], digiStateVarN = [];
+      let tradStateVarHH = [], digiStateVarHH = [];
+
+      for (let run = 0; run < nRuns; run++) {
+        const seed = 1000 + run;
+        const rngT = mulberry32(seed);
+        const rngD = mulberry32(seed);
+        const envT = new Environment(false, rngT);
+        const envD = new Environment(true, rngD);
+        const bounds = { minX: 40, maxX: simW - 40, minY: 40, maxY: simH - 40 };
+        envT.init(bounds); envD.init(bounds);
+        for (let s = 0; s < steps; s++) { envT.step(); envD.step(); }
+
+        const yT = envT.rhoHistory.young;
+        const yD = envD.rhoHistory.young;
+        if (yT.length < 2 || yD.length < 2) continue;
+
+        // Δp_N (from rho history)
+        const pT_first = yT[0].rho[nIdx], pT_last = yT[yT.length - 1].rho[nIdx];
+        const pD_first = yD[0].rho[nIdx], pD_last = yD[yD.length - 1].rho[nIdx];
+        tradDrops.push(pT_first - pT_last);
+        digiDrops.push(pD_first - pD_last);
+        diffs.push((pD_first - pD_last) - (pT_first - pT_last));
+
+        // H1: time-averaged state |mean| aggregated across traits
+        function timeAvgStateMeanAll(env) {
+          let sum = 0, count = 0;
+          for (let h of env.ageHistory) {
+            for (let t = 0; t < 6; t++) { sum += h.youngStateAbsMean[t]; count++; }
+          }
+          return count > 0 ? sum / count : 0;
+        }
+        // H2: time-averaged state variance for specific trait
+        function timeAvgStateVar(env, traitIdx) {
+          let sum = 0, count = 0;
+          for (let h of env.ageHistory) { sum += h.youngStateAbsVar[traitIdx]; count++; }
+          return count > 0 ? sum / count : 0;
+        }
+        tradStateMean.push(timeAvgStateMeanAll(envT));
+        digiStateMean.push(timeAvgStateMeanAll(envD));
+        tradStateVarN.push(timeAvgStateVar(envT, nIdx));
+        digiStateVarN.push(timeAvgStateVar(envD, nIdx));
+        tradStateVarHH.push(timeAvgStateVar(envT, hhIdx));
+        digiStateVarHH.push(timeAvgStateVar(envD, hhIdx));
+      }
+
+      if (diffs.length === 0) { output.textContent = "⚠ No valid data."; return; }
+
+      const mean = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+      const std = arr => { const m = mean(arr); return Math.sqrt(arr.reduce((a, b) => a + (b - m) ** 2, 0) / arr.length); };
+      const pairedT = (a, b) => {
+        const d = a.map((v, i) => v - b[i]);
+        const md = mean(d), sd = std(d);
+        return { m: md, s: sd, t: md / (sd / Math.sqrt(d.length)), d: md / sd };
+      };
+
+      const mTrad = mean(tradDrops), mDigi = mean(digiDrops);
+      const sTrad = std(tradDrops), sDigi = std(digiDrops);
+      const mDiff = mean(diffs), sDiff = std(diffs);
+      const t = mDiff / (sDiff / Math.sqrt(diffs.length));
+      const d = mDiff / sDiff;
+
+      // H1 paired
+      const h1 = pairedT(digiStateMean, tradStateMean);
+      // H2 paired (N)
+      const h2N = pairedT(digiStateVarN, tradStateVarN);
+      // H2 paired (HH)
+      const h2HH = pairedT(digiStateVarHH, tradStateVarHH);
+
+      output.textContent = [
+        `✔ Batch complete (n=${diffs.length}, paired same seed)`,
+        `═══════════════════════════════════`,
+        `【Δp_N】 Neuroticism rank-order stability reduction`,
+        `  Traditional : ${mTrad.toFixed(4)} ± ${sTrad.toFixed(4)}`,
+        `  Digital     : ${mDigi.toFixed(4)} ± ${sDigi.toFixed(4)}`,
+        `  Difference  : ${mDiff.toFixed(4)} ± ${sDiff.toFixed(4)}`,
+        `  95% CI      : [${(mDiff - 1.96*sDiff).toFixed(4)}, ${(mDiff + 1.96*sDiff).toFixed(4)}]`,
+        `  t(29)       : ${t.toFixed(2)}`,
+        `  Cohen's d   : ${d.toFixed(2)}`,
+        `═══════════════════════════════════`,
+        `【H1】 State |mean| (aggregated across 6 traits, time-averaged)`,
+        `  Traditional : ${mean(tradStateMean).toFixed(5)} ± ${std(tradStateMean).toFixed(5)}`,
+        `  Digital     : ${mean(digiStateMean).toFixed(5)} ± ${std(digiStateMean).toFixed(5)}`,
+        `  Paired Δ    : ${h1.m.toFixed(5)} ± ${h1.s.toFixed(5)}`,
+        `  t(29)       : ${h1.t.toFixed(2)}`,
+        `  Cohen's d   : ${h1.d.toFixed(2)}`,
+        `═══════════════════════════════════`,
+        `【H2-N】 State variance of Neuroticism (time-averaged)`,
+        `  Traditional : ${mean(tradStateVarN).toFixed(6)} ± ${std(tradStateVarN).toFixed(6)}`,
+        `  Digital     : ${mean(digiStateVarN).toFixed(6)} ± ${std(digiStateVarN).toFixed(6)}`,
+        `  Paired Δ    : ${h2N.m.toFixed(6)} ± ${h2N.s.toFixed(6)}`,
+        `  t(29)       : ${h2N.t.toFixed(2)}`,
+        `  Cohen's d   : ${h2N.d.toFixed(2)}`,
+        `═══════════════════════════════════`,
+        `【H2-HH】 State variance of Honesty-Humility (time-averaged)`,
+        `  Traditional : ${mean(tradStateVarHH).toFixed(6)} ± ${std(tradStateVarHH).toFixed(6)}`,
+        `  Digital     : ${mean(digiStateVarHH).toFixed(6)} ± ${std(digiStateVarHH).toFixed(6)}`,
+        `  Paired Δ    : ${h2HH.m.toFixed(6)} ± ${h2HH.s.toFixed(6)}`,
+        `  t(29)       : ${h2HH.t.toFixed(2)}`,
+        `  Cohen's d   : ${h2HH.d.toFixed(2)}`,
+        `═══════════════════════════════════`
+      ].join('\n');
+    } catch (e) { output.textContent = "⚠ Error: " + e.message; }
+  }, 100);
+}
+
+function exportData() {
+  let env = societyEnvD || customEnvD;
+  if (!env) { alert("No digital environment data."); return; }
+  let csv = env.exportCSV();
+  let envT = societyEnvT || customEnvT;
+  if (envT) csv += "\n" + envT.exportCSV();
+  let blob = new Blob([csv], { type: 'text/csv' });
+  let url = URL.createObjectURL(blob);
+  let a = document.createElement('a');
+  a.href = url;
+  a.download = `TESSERA_data_${Date.now()}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function triggerTradEvent() {
+  if (!societyEnvT) return;
+  let ev = TRAD_EV[Math.floor(Math.random() * TRAD_EV.length)];
+  let imp = societyEnvT._impact(ev);
+  let sample = societyEnvT._sample(10);
+  for (let a of sample) a.tessera(false, imp);
+  falling.push({ text: ev.name, x: 60 + Math.random() * (simW/2 - 120), y: 20, env: 'trad', start: performance.now()/1000, dur: eventDur });
+}
+function triggerDigiEvent() {
+  if (!societyEnvD) return;
+  let ev = DIGI_EV[Math.floor(Math.random() * DIGI_EV.length)];
+  let imp = societyEnvD._impact(ev);
+  let sample = societyEnvD._sample(10);
+  for (let a of sample) a.tessera(true, imp);
+  falling.push({ text: ev.name, x: simW/2 + 60 + Math.random() * (simW/2 - 120), y: 20, env: 'digi', start: performance.now()/1000, dur: eventDur });
+}
+
+function initCanvas() {
+  const wrap = document.getElementById('canvasWrap');
+  const canvas = document.getElementById('simCanvas');
+  if (!wrap || !canvas) return;
+  const rect = wrap.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) { requestAnimationFrame(() => initCanvas()); return; }
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + 'px'; canvas.style.height = rect.height + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  simW = rect.width; simH = rect.height;
+  canvasReady = true;
+  updateBounds(); drawSim();
+  if (currentMode === 'society') drawCharts();
+  updateUI();
+}
+function updateBounds() {
+  const half = simW / 2, pad = 40;
+  const tBounds = { minX: pad, maxX: half - pad, minY: pad, maxY: simH - pad };
+  const dBounds = { minX: half + pad, maxX: simW - pad, minY: pad, maxY: simH - pad };
+  if (societyEnvT) { societyEnvT.bounds = tBounds; societyEnvD.bounds = dBounds; }
+  if (customEnvT) { customEnvT.bounds = tBounds; customEnvD.bounds = dBounds; }
+}
+let animFrameId = null;
+function drawSim() {
+  const canvas = document.getElementById('simCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = simW, h = simH;
+  if (w === 0 || h === 0) return;
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#0b0d15'; ctx.fillRect(0, 0, w, h);
+  let grad = ctx.createRadialGradient(w*0.25, h*0.5, 0, w*0.25, h*0.5, w*0.6);
+  grad.addColorStop(0, 'rgba(0,212,255,0.02)'); grad.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, w/2, h);
+  grad = ctx.createRadialGradient(w*0.75, h*0.5, 0, w*0.75, h*0.5, w*0.6);
+  grad.addColorStop(0, 'rgba(255,0,200,0.02)'); grad.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad; ctx.fillRect(w/2, 0, w/2, h);
+  ctx.strokeStyle = 'rgba(0,212,255,0.05)'; ctx.lineWidth = 1; ctx.setLineDash([4, 8]);
+  ctx.beginPath(); ctx.moveTo(w/2, 20); ctx.lineTo(w/2, h-20); ctx.stroke(); ctx.setLineDash([]);
+  function drawAgents(env) {
+    if (!env) return;
+    const radius = 6;
+    for (let a of env.agents) {
+      const color = a.getDominantColor();
+      const glow = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, radius*3);
+      glow.addColorStop(0, color+'40'); glow.addColorStop(1, 'transparent');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(a.x, a.y, radius*3, 0, Math.PI*2); ctx.fill();
+      ctx.shadowColor = color; ctx.shadowBlur = 8;
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(a.x, a.y, radius, 0, Math.PI*2); ctx.fill();
+      ctx.shadowBlur = 0;
+      if (a === selectedAgent) {
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(a.x, a.y, radius*4, 0, Math.PI*2); ctx.stroke();
+      }
+    }
+  }
+  if (currentMode === 'society') { drawAgents(societyEnvT); drawAgents(societyEnvD); }
+  else { drawAgents(customEnvT); drawAgents(customEnvD); }
+  const now = performance.now() / 1000;
+  for (let i = falling.length - 1; i >= 0; i--) {
+    const ev = falling[i];
+    const prog = (now - ev.start) / ev.dur;
+    if (prog >= 1) { falling.splice(i, 1); continue; }
+    const y = ev.y + prog * (h - ev.y - 60);
+    const alpha = prog < 0.2 ? prog/0.2 : (1 - (prog-0.2)/0.8);
+    ctx.save(); ctx.globalAlpha = alpha*0.6;
+    ctx.font = '14px "Orbitron", sans-serif';
+    ctx.fillStyle = ev.env === 'trad' ? '#00ff9d' : '#00d4ff';
+    ctx.textAlign = 'center';
+    ctx.fillText(ev.text, ev.x, y);
+    ctx.restore();
+  }
+  let stepsShown = 0, agentCount = 0;
+  if (currentMode === 'society' && societyEnvT) { stepsShown = societyEnvT.steps; agentCount = societyEnvT.agents.length; }
+  else if (customEnvT) { stepsShown = customEnvT.steps; agentCount = customEnvT.agents.length; }
+  const stepEl = document.getElementById('stepDisplay');
+  if (stepEl) stepEl.textContent = `STEP: ${stepsShown} | AGENTS: ${agentCount}`;
+}
+function drawCharts() {
+  if (currentMode !== 'society' || !societyEnvT) return;
+  const rankCanvas = document.getElementById('rankChartCanvas');
+  const meanCanvas = document.getElementById('meanChartCanvas');
+  if (rankCanvas) drawSingleChart(rankCanvas, 'rank');
+  if (meanCanvas) drawSingleChart(meanCanvas, 'mean');
+}
+function drawSingleChart(canvas, type) {
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width; canvas.height = rect.height;
+  const w = canvas.width, h = canvas.height;
+  if (w === 0 || h === 0) return;
+  ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0, 0, w, h);
+  const dataT = societyEnvT.ageHistory, dataD = societyEnvD.ageHistory;
+  if (dataT.length < 2 || dataD.length < 2) {
+    ctx.fillStyle = '#445566'; ctx.font = '10px "Orbitron", sans-serif';
+    ctx.textAlign = 'center'; ctx.fillText('WAITING FOR DATA...', w/2, h/2); return;
+  }
+  const maxLen = Math.min(dataT.length, dataD.length);
+  const margin = { top: 20, right: 20, bottom: 24, left: 36 };
+  const pw = w - margin.left - margin.right;
+  const ph = h - margin.top - margin.bottom;
+  const gKey = ageFocus === 'child' ? 'child' : ageFocus === 'young' ? 'young' : 'old';
+  const rKey = gKey + 'R', mKey = gKey + 'Mean';
+  ctx.strokeStyle = 'rgba(0,212,255,0.08)'; ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const y = margin.top + (ph/4)*i;
+    ctx.beginPath(); ctx.moveTo(margin.left, y); ctx.lineTo(w-margin.right, y); ctx.stroke();
+    ctx.fillStyle = '#8899aa'; ctx.font = '8px "JetBrains Mono"'; ctx.textAlign = 'right';
+    let label = type === 'rank' ? (1 - i/4).toFixed(2) : (0.3 + 0.4*(1 - i/4)).toFixed(2);
+    ctx.fillText(label, margin.left - 4, y + 3);
+  }
+  for (let ti = 0; ti < TRAITS.length; ti++) {
+    const t = TRAITS[ti], color = COLORS[t];
+    ctx.strokeStyle = color; ctx.lineWidth = 1.2; ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    for (let i = 0; i < maxLen; i++) {
+      const arr = type === 'rank' ? dataT[i][rKey] : dataT[i][mKey];
+      let val = arr[ti];
+      if (type === 'rank') val = (val + 1) / 2;
+      else val = Math.max(0, Math.min(1, val));
+      const x = margin.left + (pw*i)/(maxLen-1||1);
+      const y = margin.top + ph - val*ph;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath();
+    for (let i = 0; i < maxLen; i++) {
+      const arr = type === 'rank' ? dataD[i][rKey] : dataD[i][mKey];
+      let val = arr[ti];
+      if (type === 'rank') val = (val + 1) / 2;
+      else val = Math.max(0, Math.min(1, val));
+      const x = margin.left + (pw*i)/(maxLen-1||1);
+      const y = margin.top + ph - val*ph;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.font = '9px "Orbitron", sans-serif';
+  ctx.textAlign = 'left'; ctx.fillStyle = '#aaccee';
+  ctx.fillText('--- Trad   — Digi', margin.left, 14);
+  let legX = w - margin.right - 100;
+  for (let ti = 0; ti < TRAITS.length; ti++) {
+    ctx.fillStyle = COLORS[TRAITS[ti]];
+    ctx.fillText(TRAITS[ti], legX + ti*18, 14);
+  }
+  ctx.fillStyle = '#8899aa'; ctx.font = '8px "Orbitron", sans-serif';
+  ctx.textAlign = 'center'; ctx.fillText('SIMULATION STEPS (x20)', w/2, h-6);
+}
+function updateUI() {
+  const detail = document.getElementById('agentDetail');
+  if (detail && selectedAgent) {
+    const a = selectedAgent;
+    let html = `<div style="font-size:10px;font-weight:700;color:#fff;margin-bottom:4px;">${a.name} <span style="color:#556;">age ${a.age.toFixed(1)}</span></div>`;
+    html += `<div style="font-size:7px;color:#667788;margin-bottom:6px;">${a.background.family} · ${a.background.education} · ${a.background.locale}</div>`;
+    html += '<div style="display:flex;flex-wrap:wrap;gap:4px 8px;">';
+    for (let t of TRAITS) {
+      const color = COLORS[t] || '#b0b8c0';
+      const val = a.traits[t], base = a.base[t];
+      const diff = val - base, sign = diff >= 0 ? '+' : '';
+      html += `<span style="color:${color};font-weight:700;background:rgba(255,255,255,0.02);padding:0 6px;font-size:8px;">${val.toFixed(2)} <span style="color:#667788;">${base.toFixed(2)} ${sign}${diff.toFixed(2)}</span></span>`;
+    }
+    html += '</div>';
+    detail.innerHTML = html;
+    drawPersonalChart();
+  } else if (detail) detail.innerHTML = 'Click an agent on canvas.';
+}
+function drawPersonalChart() {
+  const canvas = document.getElementById('personalChartCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width; canvas.height = rect.height;
+  const w = canvas.width, h = canvas.height;
+  if (w === 0 || h === 0) return;
+  ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(0, 0, w, h);
+  if (!selectedAgent || selectedAgent.traitHistory.length < 2) {
+    ctx.fillStyle = '#445566'; ctx.font = '8px "Orbitron", sans-serif';
+    ctx.textAlign = 'center'; ctx.fillText('SELECT AGENT', w/2, h/2+4); return;
+  }
+  const hist = selectedAgent.traitHistory;
+  const margin = { top: 8, right: 8, bottom: 12, left: 20 };
+  const pw = w - margin.left - margin.right, ph = h - margin.top - margin.bottom;
+  for (let ti = 0; ti < TRAITS.length; ti++) {
+    const t = TRAITS[ti];
+    ctx.strokeStyle = COLORS[t]; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < hist.length; i++) {
+      const val = hist[i].traits[t];
+      const x = margin.left + (pw*i)/(hist.length-1);
+      const y = margin.top + ph - val*ph;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+}
+function resetSim() {
+  if (currentMode === 'society') {
+    const half = simW / 2, pad = 40;
+    societyEnvT.init({ minX: pad, maxX: half - pad, minY: pad, maxY: simH - pad });
+    societyEnvD.init({ minX: half + pad, maxX: simW - pad, minY: pad, maxY: simH - pad });
+    selectedAgent = null; globalEvents = []; falling = [];
+    drawSim();
+  }
+}
+function setAgeFocus(f) { ageFocus = f; if (currentMode === 'society') { renderSocietyPanel(); resetSim(); } }
+function startCustomSim() {
+  const name = document.getElementById('custName').value || 'Alex';
+  const age = parseFloat(document.getElementById('custAge').value) || 25;
+  const background = { family: "Nuclear", education: "College", economy: "Middle", siblings: 0, locale: "Urban" };
+  const traits = {};
+  TRAITS.forEach(t => traits[t] = parseFloat(document.getElementById('cust_' + t).value) || 0.5);
+  initCanvas();
+  const half = simW / 2, pad = 40;
+  const xTrad = pad + Math.random()*(half-2*pad), yTrad = pad + Math.random()*(simH-2*pad);
+  const xDigi = half+pad + Math.random()*(half-2*pad), yDigi = pad + Math.random()*(simH-2*pad);
+  customAgentTrad = new Agent(xTrad, yTrad, age, name+'_Trad', background, traits, Math.random);
+  customAgentDigi = new Agent(xDigi, yDigi, age, name+'_Digi', background, traits, Math.random);
+  customEnvT = new Environment(false, Math.random);
+  customEnvD = new Environment(true, Math.random);
+  customEnvT.bounds = { minX: pad, maxX: half-pad, minY: pad, maxY: simH-pad };
+  customEnvD.bounds = { minX: half+pad, maxX: simW-pad, minY: pad, maxY: simH-pad };
+  customEnvT.init(customEnvT.bounds, [customAgentTrad]);
+  customEnvD.init(customEnvD.bounds, [customAgentDigi]);
+  selectedAgent = customAgentTrad;
+  document.getElementById('customDetailArea').style.display = 'block';
+  updateUI(); drawSim();
+}
+function viewCustomTrad() { if (customAgentTrad) { selectedAgent = customAgentTrad; updateUI(); } }
+function viewCustomDigi() { if (customAgentDigi) { selectedAgent = customAgentDigi; updateUI(); } }
+function bindCanvasEvents() {
+  const simCanvas = document.getElementById('simCanvas');
+  if (!simCanvas) return;
+  simCanvas.addEventListener('click', function (e) {
+    const rect = this.getBoundingClientRect();
+    const scaleX = simW / rect.width, scaleY = simH / rect.height;
+    const mx = (e.clientX - rect.left)*scaleX, my = (e.clientY - rect.top)*scaleY;
+    let all = [];
+    if (currentMode === 'society' && societyEnvT) all = [...societyEnvT.agents, ...societyEnvD.agents];
+    else if (currentMode === 'custom' && customEnvT) all = [...customEnvT.agents, ...customEnvD.agents];
+    let found = null;
+    for (let a of all) {
+      const dx = mx - a.x, dy = my - a.y;
+      if (Math.sqrt(dx*dx+dy*dy) < 12) { found = a; break; }
+    }
+    selectedAgent = found; updateUI();
+  });
+  simCanvas.addEventListener('mousemove', function (e) {
+    const rect = this.getBoundingClientRect();
+    const scaleX = simW / rect.width, scaleY = simH / rect.height;
+    const mx = (e.clientX - rect.left)*scaleX, my = (e.clientY - rect.top)*scaleY;
+    const tooltip = document.getElementById('tooltip');
+    let all = [];
+    if (currentMode === 'society' && societyEnvT) all = [...societyEnvT.agents, ...societyEnvD.agents];
+    else if (currentMode === 'custom' && customEnvT) all = [...customEnvT.agents, ...customEnvD.agents];
+    let found = null;
+    for (let a of all) {
+      const dx = mx - a.x, dy = my - a.y;
+      if (Math.sqrt(dx*dx+dy*dy) < 12) { found = a; break; }
+    }
+    if (found) {
+      tooltip.style.display = 'block';
+      tooltip.innerHTML = `<div class="name">${found.name}</div>Age: ${found.age.toFixed(1)}<br>` +
+        TRAITS.map(t => `<span style="color:${COLORS[t]}">${t}: ${found.traits[t].toFixed(2)}</span>`).join(' ');
+      let left = e.clientX - rect.left + 16, top = e.clientY - rect.top - 40;
+      if (left + 160 > simW) left = e.clientX - rect.left - 160;
+      if (top < 10) top = 10;
+      tooltip.style.left = left + 'px'; tooltip.style.top = top + 'px';
+    } else tooltip.style.display = 'none';
+  });
+  simCanvas.addEventListener('mouseleave', function () {
+    document.getElementById('tooltip').style.display = 'none';
+  });
+}
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.key === ' ') { e.preventDefault(); togglePause(); }
+  if (e.key === 's' || e.key === 'S') toggleSpeed();
+  if (e.key === 'r' || e.key === 'R') resetSim();
+  if (e.key === 'Escape') {
+    const tut = document.getElementById('tutorialOverlay');
+    if (tut && tut.style.display === 'flex') closeTutorial();
+  }
+});
+function togglePause() {
+  paused = !paused;
+  const btn = document.getElementById('pauseButton');
+  const badge = document.getElementById('statusBadge');
+  if (paused) { btn.textContent = '▶ RESUME'; badge.textContent = 'Paused'; badge.className = 'badge pause'; }
+  else { btn.textContent = 'II PAUSE'; badge.textContent = 'Running'; badge.className = 'badge run'; }
+}
+function toggleSpeed() { fast = !fast; const btn = document.getElementById('speedButton'); if (btn) btn.textContent = fast ? '3x' : '1x'; }
+function loop() {
+  try {
+    if (!paused) {
+      const steps = fast ? 3 : 1;
+      for (let s = 0; s < steps; s++) {
+        if (currentMode === 'society' && societyEnvT) { societyEnvT.step(); societyEnvD.step(); }
+        else if (currentMode === 'custom' && customEnvT) { customEnvT.step(); customEnvD.step(); }
+      }
+    }
+    drawSim();
+    if (currentMode === 'society') drawCharts();
+    updateUI();
+  } catch (e) { console.warn('Loop error:', e); }
+  animFrameId = requestAnimationFrame(loop);
+}
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    initCanvas();
+    if (currentMode === 'society') { updateBounds(); drawSim(); drawCharts(); }
+    else drawSim();
+  }, 200);
+});
+window.onload = function () {
+  requestAnimationFrame(() => {
+    initCanvas();
+    if (!canvasReady) setTimeout(initCanvas, 100);
+    bindCanvasEvents();
+    loop();
+  });
+};
+</script>
+</body>
+</html>
