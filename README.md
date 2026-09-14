@@ -1,0 +1,1 @@
+The complete model, parameter files, random seeds (1000–1029), raw CSV outputs, and analysis scripts are openly available at [GitHub](https://github.com/nancyji123/Xinyu-Wu-Paper-html) and archived at [Zenodo](https://doi.org/[你的DOI]).
